@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Café del Centro — Specialty Coffee (#59 Top 100 Latinoamérica y el Caribe). Reservas de mesa en tiempo real, catálogo con trazabilidad cafetalera, pedidos Pick-up y portal mayorista B2B." />
+  <title>Café del Centro | Specialty Coffee — San Salvador</title>
+
+  <!-- Google Fonts: Tipografía moderna y redondeada (Poppins + Ubuntu) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Sistema de Estilos Material Design 3 Ultra-Responsivo -->
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+
+  <!-- 1. BARRA SUPERIOR GLOBAL (#013542): Sincronización RNF-03, Role Switcher y Navegación -->
+  <header class="global-header">
+    <!-- Franja de Control de Prototipo y Sincronización en Vivo -->
+    <div class="demo-control-strip">
+      <div class="container demo-strip-inner">
+        <div id="live-sync-badge" class="sync-indicator" role="status" aria-live="polite">
+          <span class="sync-dot" aria-hidden="true"></span>
+          <span id="live-sync-text">Sincronización en vivo (&lt; 3s) - RNF-03</span>
+        </div>
+
+        <!-- Role Switcher (Selector de Rol para Demostración) -->
+        <nav class="role-switcher" aria-label="Selector de Rol del Sistema">
+          <button type="button" class="role-btn active" data-role-switch="client">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Vista Cliente</span>
+          </button>
+          <button type="button" class="role-btn" data-role-switch="staff">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <span>Vista Staff / Barra</span>
+            <span id="badge-role-staff" class="role-badge-count">3</span>
+          </button>
+          <button type="button" class="role-btn" data-role-switch="admin">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+            <span>Vista Administradora</span>
+            <span id="badge-role-admin" class="role-badge-count">2</span>
+          </button>
+        </nav>
+
+        <button type="button" id="btn-reset-demo" class="btn-reset-demo" title="Reiniciar localStorage a los datos iniciales de DESIGN.md">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          <span>Restaurar Datos Demo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Top App Bar Comercial Principal (#013542) -->
+    <div class="main-brand-bar">
+      <div class="container brand-bar-inner">
+        <button type="button" class="brand-identity-btn" data-nav-screen="P-01" aria-label="Ir al inicio de Café del Centro">
+          <div class="brand-monogram" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>
+          </div>
+          <div class="brand-text-wrap">
+            <span class="brand-title">Café del Centro | Specialty Coffee</span>
+            <span class="brand-location-sub">
+              <span class="open-dot"></span> Abierto hoy 7:00 AM – 7:00 PM • Frente a Parque Libertad
+            </span>
+          </div>
+        </button>
+
+        <!-- Navegación contextual renderizada dinámicamente -->
+        <div id="header-context-nav" class="header-context-nav"></div>
+      </div>
+    </div>
+
+    <!-- Cinta rápida de pantallas P-01 a P-08 (deslizable en móvil) -->
+    <div class="screen-jump-bar">
+      <div class="container screen-jump-inner">
+        <span class="jump-label">Pantallas:</span>
+        <div id="screen-jump-list" class="screen-jump-list" role="navigation" aria-label="Navegación rápida P-01 a P-08"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. CONTENEDOR DINÁMICO DE VISTAS SPA (P-01 A P-08) -->
+  <main id="app-root" class="app-main">
+    <noscript>
+      <div class="container" style="padding: 40px 16px;">
+        <div class="md3-surface-card">
+          <h2>JavaScript requerido</h2>
+          <p>Habilita JavaScript en tu navegador para utilizar la plataforma de Café del Centro.</p>
+        </div>
+      </div>
+    </noscript>
+  </main>
+
+  <!-- 3. BARRA INFERIOR MÓVIL TIPO APP NATIVA (Visible en Vista Cliente en pantallas móviles) -->
+  <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Navegación móvil"></nav>
+
+  <!-- 4. HOST DE MODALES (Modal P-02.1 RN-01, Lightbox Fotográfico, Rechazo HU-14, Conflictos HU-08) -->
+  <div id="modal-host"></div>
+
+  <!-- 5. NOTIFICACIONES EMERGENTES (TOASTS) -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- 6. PIE DE PÁGINA COMERCIAL REALISTA -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-brand-title">Café del Centro</div>
+        <p class="footer-desc">
+          Specialty Coffee | Est. 2023. Celebrando la caficultura salvadoreña de alta montaña frente al Parque Libertad, Centro Histórico de San Salvador.
+        </p>
+        <span class="award-pill-footer">
+          <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          <span>Posición #59 Top 100 Latinoamérica y el Caribe</span>
+        </span>
+      </div>
+      <div>
+        <div class="footer-col-title">Visítanos</div>
+        <ul class="footer-list">
+          <li>Esquina opuesta al Parque Libertad, Centro Histórico, San Salvador</li>
+          <li>Lun – Dom: 7:00 AM – 7:00 PM</li>
+          <li>Ventanas Mayoristas B2B: Pre-apertura y Post-cierre</li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Accesos Rápidos</div>
+        <div class="footer-links">
+          <button type="button" class="footer-link-btn" data-nav-screen="P-01">Catálogo y Origen (P-01)</button>
+          <button type="button" class="footer-link-btn" data-nav-screen="P-02">Reservar Mesa (P-02)</button>
+          <button type="button" class="footer-link-btn" data-nav-screen="P-04">Pedidos Pick-up / B2B (P-04)</button>
+          <button type="button" class="footer-link-btn" data-nav-screen="P-05">Rastrear Orden (P-05)</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <span>&copy; 2026 Café del Centro — Trazabilidad 100% Salvadoreña</span>
+        <span>Arquitectura Material Design 3 • Linuxeros Digital Consulting (LDC) — Grupo 4</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts modulares con rutas relativas para GitHub Pages -->
+  <script src="./js/data.js"></script>
+  <script src="./js/store.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
