@@ -39,6 +39,10 @@
       admin: 'P-08'
     },
 
+    // Detección automática de dispositivo móvil y vista móvil interactiva
+    isRealMobile: false,
+    mobilePreviewForced: false,
+
     // Lightbox de fotos reales del local
     lightbox: {
       open: false,
@@ -186,8 +190,87 @@
     clipboard: svgIcon('<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>', 17),
     flame: svgIcon('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>', 17),
     truck: svgIcon('<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>', 17),
-    calendar: svgIcon('<rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', 16)
+    calendar: svgIcon('<rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', 16),
+    smartphone: svgIcon('<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>', 14),
+    monitor: svgIcon('<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>', 14),
+    chartBar: svgIcon('<path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/>', 20)
   };
+
+  // Detección automática de dispositivos móviles (User-Agent, Client Hints, Puntero Táctil y Viewport)
+  function detectMobileDevice() {
+    const nav = window.navigator || {};
+    const ua = String(nav.userAgent || '');
+    const uaDataMobile = Boolean(nav.userAgentData && nav.userAgentData.mobile === true);
+    const uaRegexMobile = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone|Mobile/i.test(ua);
+    const narrowInner = typeof window.innerWidth === 'number' && window.innerWidth > 0 && window.innerWidth <= 768;
+
+    let mqNarrow = false;
+    let mqTouchMobile = false;
+    if (typeof window.matchMedia === 'function') {
+      try {
+        mqNarrow = Boolean(window.matchMedia('(max-width: 768px)').matches);
+        mqTouchMobile = Boolean(window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches);
+      } catch (_) {}
+    }
+
+    return Boolean(uaDataMobile || uaRegexMobile || narrowInner || mqNarrow || mqTouchMobile);
+  }
+
+  function syncDeviceViewportState() {
+    ui.isRealMobile = detectMobileDevice();
+    const isMobileActive = Boolean(ui.isRealMobile || ui.mobilePreviewForced);
+    const isFramedPreview = Boolean(!ui.isRealMobile && ui.mobilePreviewForced);
+
+    if (document.documentElement && typeof document.documentElement.setAttribute === 'function') {
+      document.documentElement.setAttribute('data-device', isMobileActive ? 'mobile' : 'desktop');
+    }
+
+    if (document.body && document.body.classList) {
+      document.body.classList.toggle('is-mobile-active', isMobileActive);
+      document.body.classList.toggle('is-real-mobile', ui.isRealMobile);
+      document.body.classList.toggle('mobile-sim-framed', isFramedPreview);
+    }
+
+    const toggleBtn = document.getElementById('btn-mobile-view-toggle');
+    const iconBox = document.getElementById('device-mode-icon');
+    const labelEl = document.getElementById('device-mode-label');
+    const simBanner = document.getElementById('mobile-sim-banner');
+
+    if (toggleBtn && labelEl && iconBox) {
+      if (ui.isRealMobile) {
+        toggleBtn.classList.add('device-active');
+        iconBox.innerHTML = ICONS.smartphone;
+        labelEl.textContent = 'Móvil Detectado';
+        toggleBtn.title = 'Dispositivo móvil detectado automáticamente';
+      } else if (ui.mobilePreviewForced) {
+        toggleBtn.classList.add('device-active');
+        iconBox.innerHTML = ICONS.monitor;
+        labelEl.textContent = 'Escritorio';
+        toggleBtn.title = 'Volver a Vista de Escritorio';
+      } else {
+        toggleBtn.classList.remove('device-active');
+        iconBox.innerHTML = ICONS.smartphone;
+        labelEl.textContent = 'Vista Móvil';
+        toggleBtn.title = 'Previsualizar Vista Móvil responsiva';
+      }
+    }
+
+    if (simBanner) {
+      if (isFramedPreview) {
+        simBanner.innerHTML = `
+          <span class="inline-icon-text">${ICONS.smartphone}<span>Vista Móvil Responsiva Activa (412px)</span></span>
+          <button type="button" class="mobile-sim-exit-btn" data-action="toggle-mobile-preview">
+            ${ICONS.monitor}
+            <span>Volver a Escritorio</span>
+          </button>
+        `;
+      } else {
+        simBanner.innerHTML = '';
+      }
+    }
+
+    return isMobileActive;
+  }
 
   // SVG Ilustración arquitectónica de mesa según capacidad (2, 4 o 6 sillas)
   function renderTableSvgGraphic(capacity) {
@@ -324,6 +407,8 @@
   }
 
   function renderHeaderAndMobileNav() {
+    syncDeviceViewportState();
+
     const s = store.getState();
     const cartTotals = store.getCartTotals();
     const activeOrdersCount = s.orders.filter(function (o) {
@@ -392,30 +477,35 @@
         `;
       } else if (ui.currentRole === 'staff') {
         headerNav.innerHTML = `
-          <button type="button" class="header-nav-link ${ui.currentScreen === 'P-06' ? 'active' : ''}" data-nav-screen="P-06">
-            Salón y Check-in (${pendingCheckinsCount})
-          </button>
-          <button type="button" class="header-nav-link ${ui.currentScreen === 'P-07' ? 'active' : ''}" data-nav-screen="P-07">
-            Cola Pedidos (${activeOrdersCount})
-          </button>
+          <div class="desktop-only-nav" style="display:flex; align-items:center; gap:6px;">
+            <button type="button" class="header-nav-link ${ui.currentScreen === 'P-06' ? 'active' : ''}" data-nav-screen="P-06">
+              Salón y Check-in (${pendingCheckinsCount})
+            </button>
+            <button type="button" class="header-nav-link ${ui.currentScreen === 'P-07' ? 'active' : ''}" data-nav-screen="P-07">
+              Cola Pedidos (${activeOrdersCount})
+            </button>
+          </div>
         `;
       } else {
         headerNav.innerHTML = `
-          <span class="header-nav-link active" style="cursor:default;">
-            Panel Ejecutivo B2B (${pendingB2BCount} pendientes)
-          </span>
+          <div class="desktop-only-nav" style="display:flex; align-items:center; gap:6px;">
+            <span class="header-nav-link active" style="cursor:default;">
+              Panel Ejecutivo B2B (${pendingB2BCount} pendientes)
+            </span>
+          </div>
         `;
       }
     }
 
-    // Mobile Bottom Navigation Bar (App Nativa en pantallas <= 768px)
+    // Barra Inferior Móvil Adaptable por Rol (App Nativa en Dispositivos Móviles y Vista Móvil)
     const mobNav = document.getElementById('mobile-bottom-nav');
     if (document.body && document.body.classList) {
-      document.body.classList.toggle('has-mobile-nav', ui.currentRole === 'client');
+      document.body.classList.add('has-mobile-nav');
     }
     if (mobNav) {
+      mobNav.classList.add('visible');
       if (ui.currentRole === 'client') {
-        mobNav.classList.add('visible');
+        if (typeof mobNav.setAttribute === 'function') mobNav.setAttribute('data-cols', '4');
         const isRes = ui.currentScreen === 'P-02' || ui.currentScreen === 'P-03';
         mobNav.innerHTML = `
           <button type="button" class="mob-nav-btn ${ui.currentScreen === 'P-01' ? 'active' : ''}" data-nav-screen="P-01">
@@ -436,9 +526,41 @@
             <span>Orden</span>
           </button>
         `;
+      } else if (ui.currentRole === 'staff') {
+        if (typeof mobNav.setAttribute === 'function') mobNav.setAttribute('data-cols', '3');
+        mobNav.innerHTML = `
+          <button type="button" class="mob-nav-btn ${ui.currentScreen === 'P-06' ? 'active' : ''}" data-nav-screen="P-06">
+            ${pendingCheckinsCount > 0 ? `<span class="mob-nav-badge">${pendingCheckinsCount}</span>` : ''}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg>
+            <span>Salón POS</span>
+          </button>
+          <button type="button" class="mob-nav-btn ${ui.currentScreen === 'P-07' ? 'active' : ''}" data-nav-screen="P-07">
+            ${activeOrdersCount > 0 ? `<span class="mob-nav-badge">${activeOrdersCount}</span>` : ''}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>Cola Barra</span>
+          </button>
+          <button type="button" class="mob-nav-btn" data-nav-screen="P-01">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Cliente</span>
+          </button>
+        `;
       } else {
-        mobNav.classList.remove('visible');
-        mobNav.innerHTML = '';
+        if (typeof mobNav.setAttribute === 'function') mobNav.setAttribute('data-cols', '3');
+        mobNav.innerHTML = `
+          <button type="button" class="mob-nav-btn ${ui.currentScreen === 'P-08' ? 'active' : ''}" data-nav-screen="P-08">
+            ${pendingB2BCount > 0 ? `<span class="mob-nav-badge">${pendingB2BCount}</span>` : ''}
+            ${ICONS.chartBar}
+            <span>Admin B2B</span>
+          </button>
+          <button type="button" class="mob-nav-btn" data-nav-screen="P-07">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>Cola Barra</span>
+          </button>
+          <button type="button" class="mob-nav-btn" data-nav-screen="P-01">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Cliente</span>
+          </button>
+        `;
       }
     }
   }
@@ -713,7 +835,7 @@
     } else if (item.isTableExperience) {
       actionControlsHtml = `
         <button type="button" class="btn-tertiary w-full" data-action="request-table-method">
-          <span>Solicitar Método en Mesa (75 min)</span>
+          <span>Solicitar Método en Mesa</span>
           ${ICONS.arrowRight}
         </button>
       `;
@@ -788,7 +910,66 @@
         </div>
 
         <div class="booking-split-layout">
-          <!-- COLUMNA IZQUIERDA: Plano Arquitectónico Interactivo de las 8 Mesas -->
+          <!-- PASOS 1 Y 2 (Arriba en Móvil, Columna Derecha Superior en Escritorio) -->
+          <div class="booking-steps-top">
+            <!-- Paso 1 -->
+            <div class="step-box">
+              <div class="step-box-header">
+                <span class="step-badge-num">1</span>
+                <h3 style="margin:0; font-size:1rem;">Fecha y Cantidad de Personas</h3>
+              </div>
+              <div class="form-grid-2">
+                <div>
+                  <label class="field-label" for="res-date-input">Fecha</label>
+                  <input id="res-date-input" type="date" class="md3-input" min="${today}" value="${escapeHtml(d.date)}" data-res-field="date" />
+                  <div style="display:flex; gap:6px; margin-top:6px;">
+                    <button type="button" class="md3-chip ${d.date === today ? 'active' : ''}" style="padding:4px 10px; font-size:0.73rem;" data-res-quick-date="${today}">Hoy</button>
+                    <button type="button" class="md3-chip ${d.date === tomorrow ? 'active' : ''}" style="padding:4px 10px; font-size:0.73rem;" data-res-quick-date="${tomorrow}">Mañana</button>
+                  </div>
+                </div>
+                <div>
+                  <span class="field-label" style="display:block; margin-bottom:5px;">Comensales (1 a 6)</span>
+                  <div class="guest-stepper">
+                    <button type="button" class="stepper-btn" data-guest-delta="-1" ${d.guests <= 1 ? 'disabled' : ''} aria-label="Menos personas">${ICONS.minus}</button>
+                    <strong style="font-family:var(--font-ubuntu); font-size:0.95rem;">${d.guests} pers.</strong>
+                    <button type="button" class="stepper-btn" data-guest-delta="1" ${d.guests >= 6 ? 'disabled' : ''} aria-label="Más personas">${ICONS.plus}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Paso 2 -->
+            <div class="step-box">
+              <div class="step-box-header">
+                <span class="step-badge-num">2</span>
+                <h3 style="margin:0; font-size:1rem;">Bloque Horario (RN-01)</h3>
+              </div>
+              <div class="timeblock-chips-group">
+                ${TIME_BLOCKS.map(function (block) {
+                  const evalStatus = store.evaluateTimeBlockStatus(d.date, block.id);
+                  const isSelected = d.timeBlockId === block.id;
+                  const isBlockedOrCap = !evalStatus.available;
+                  let labelText = block.chipLabel || block.label;
+                  if (evalStatus.reason === 'admin_block') {
+                    labelText = `${block.shortLabel} (Evento)`;
+                  }
+                  return `
+                    <button
+                      type="button"
+                      class="md3-chip ${isSelected ? 'active' : ''} ${isBlockedOrCap && !isSelected ? 'chip-warning' : ''}"
+                      style="padding:7px 13px; font-size:0.8rem;"
+                      data-select-timeblock="${block.id}"
+                    >
+                      ${isBlockedOrCap ? ICONS.alertTriangle : ICONS.clock}
+                      <span>${escapeHtml(labelText)}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- PLANO ARQUITECTÓNICO INTERACTIVO DE LAS 8 MESAS (Columna Izquierda en Escritorio, Paso Intermedio Natural en Móvil) -->
           <div class="floorplan-blueprint">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
               <div>
@@ -849,7 +1030,7 @@
                     ${!isSelectable ? 'disabled' : ''}
                   >
                     <div class="table-furniture-graphic">
-                      <div>
+                      <div style="min-width:0;">
                         <strong style="font-size:1.02rem; display:block; color:var(--md-sys-color-on-surface);">${escapeHtml(t.name)}</strong>
                         <span style="font-size:0.75rem; color:var(--md-sys-color-on-surface-muted);">${escapeHtml(t.zone)}</span>
                       </div>
@@ -880,64 +1061,8 @@
             ${d.errors.table ? `<div class="field-error-msg" style="margin-top:10px;">${escapeHtml(d.errors.table)}</div>` : ''}
           </div>
 
-          <!-- COLUMNA DERECHA: Configurador Guiado en 4 Pasos -->
-          <div class="booking-steps-panel">
-            <!-- Paso 1 -->
-            <div class="step-box">
-              <div class="step-box-header">
-                <span class="step-badge-num">1</span>
-                <h3 style="margin:0; font-size:1rem;">Fecha y Cantidad de Personas</h3>
-              </div>
-              <div class="form-grid-2">
-                <div>
-                  <label class="field-label" for="res-date-input">Fecha</label>
-                  <input id="res-date-input" type="date" class="md3-input" min="${today}" value="${escapeHtml(d.date)}" data-res-field="date" />
-                  <div style="display:flex; gap:6px; margin-top:6px;">
-                    <button type="button" class="md3-chip ${d.date === today ? 'active' : ''}" style="padding:4px 10px; font-size:0.73rem;" data-res-quick-date="${today}">Hoy</button>
-                    <button type="button" class="md3-chip ${d.date === tomorrow ? 'active' : ''}" style="padding:4px 10px; font-size:0.73rem;" data-res-quick-date="${tomorrow}">Mañana</button>
-                  </div>
-                </div>
-                <div>
-                  <span class="field-label" style="display:block; margin-bottom:5px;">Comensales (1 a 6)</span>
-                  <div class="guest-stepper">
-                    <button type="button" class="stepper-btn" data-guest-delta="-1" ${d.guests <= 1 ? 'disabled' : ''} aria-label="Menos personas">${ICONS.minus}</button>
-                    <strong style="font-family:var(--font-ubuntu); font-size:0.95rem;">${d.guests} pers.</strong>
-                    <button type="button" class="stepper-btn" data-guest-delta="1" ${d.guests >= 6 ? 'disabled' : ''} aria-label="Más personas">${ICONS.plus}</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Paso 2 -->
-            <div class="step-box">
-              <div class="step-box-header">
-                <span class="step-badge-num">2</span>
-                <h3 style="margin:0; font-size:1rem;">Bloque Horario (RN-01)</h3>
-              </div>
-              <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                ${TIME_BLOCKS.map(function (block) {
-                  const evalStatus = store.evaluateTimeBlockStatus(d.date, block.id);
-                  const isSelected = d.timeBlockId === block.id;
-                  const isBlockedOrCap = !evalStatus.available;
-                  let labelText = block.chipLabel || block.label;
-                  if (evalStatus.reason === 'admin_block') {
-                    labelText = `${block.shortLabel} (Evento)`;
-                  }
-                  return `
-                    <button
-                      type="button"
-                      class="md3-chip ${isSelected ? 'active' : ''} ${isBlockedOrCap && !isSelected ? 'chip-warning' : ''}"
-                      style="padding:7px 13px; font-size:0.8rem;"
-                      data-select-timeblock="${block.id}"
-                    >
-                      ${isBlockedOrCap ? ICONS.alertTriangle : ICONS.clock}
-                      <span>${escapeHtml(labelText)}</span>
-                    </button>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-
+          <!-- PASOS 3 Y 4 (Debajo del Plano en Móvil, Columna Derecha Inferior en Escritorio) -->
+          <div class="booking-steps-bottom">
             <!-- Paso 3 -->
             <div class="step-box">
               <div class="step-box-header">
@@ -1144,7 +1269,7 @@
 
             <div style="display:flex; flex-wrap:wrap; gap:10px;">
               <button type="button" class="btn-primary" style="flex:1;" data-action="jump-staff-checkin">
-                <span>Simular Llegada y Check-in en Barra (P-06)</span>
+                <span>Simular Llegada y Check-in en Barra</span>
                 ${ICONS.arrowRight}
               </button>
               <button type="button" class="btn-outline" data-nav-screen="P-01">
@@ -1222,7 +1347,7 @@
                         return `
                           <div class="cart-item-row">
                             <img src="${it.image}" alt="${escapeHtml(it.name)}" class="cart-item-thumb" />
-                            <div style="flex:1; min-width:140px;">
+                            <div style="flex:1 1 130px; min-width:0; overflow-wrap:break-word;">
                               <strong style="font-size:0.92rem; display:block;">${escapeHtml(it.name)}</strong>
                               <span style="font-size:0.78rem; color:var(--md-sys-color-on-surface-muted);">
                                 $${it.price.toFixed(2)} / ${escapeHtml(it.unit)} • Subtotal: <strong>$${it.lineTotal.toFixed(2)}</strong>
@@ -1681,9 +1806,9 @@
                       .map(function (it) {
                         const img = getProductImageById(it.itemId);
                         return `
-                          <div style="display:flex; align-items:center; gap:10px; background:#FFFFFF; padding:8px 12px; border-radius:12px; border:1px solid rgba(25,44,61,0.08);">
-                            <img src="${img}" alt="${escapeHtml(it.name)}" style="width:42px; height:42px; border-radius:8px; object-fit:cover;" />
-                            <div style="font-size:0.8rem;">
+                          <div style="display:flex; align-items:center; gap:10px; background:#FFFFFF; padding:8px 12px; border-radius:12px; border:1px solid rgba(25,44,61,0.08); max-width:100%;">
+                            <img src="${img}" alt="${escapeHtml(it.name)}" class="receipt-item-thumb" />
+                            <div style="font-size:0.8rem; min-width:0; overflow-wrap:break-word;">
                               <strong>${it.qty} ${it.unit === 'lb' ? 'lb' : 'x'} ${escapeHtml(it.name)}</strong>
                             </div>
                           </div>
@@ -1914,8 +2039,10 @@
             isDelayedRN02
               ? `
                 <div class="rn02-warning-box" role="alert">
-                  <div class="inline-icon-text" style="margin-bottom:3px;">${ICONS.alertTriangle}<span>Alerta Preventiva RN-02:</span></div>
-                  "${res.delayedMinutes} min sin Check-in - Se liberará en ${15 - res.delayedMinutes} min"
+                  <div class="inline-icon-text" style="align-items:flex-start;">
+                    ${ICONS.alertTriangle}
+                    <span>${res.delayedMinutes} min sin Check-in - Se liberará en ${15 - res.delayedMinutes} min</span>
+                  </div>
                 </div>
               `
               : ''
@@ -1932,7 +2059,7 @@
                 </button>
                 <button type="button" class="btn-tertiary w-full" style="font-size:0.78rem; padding:9px 12px;" data-expire-rn02="${res.id}">
                   ${ICONS.timer}
-                  <span>Simular Vencimiento 15 min (RN-02)</span>
+                  <span>Simular Vencimiento 15 min</span>
                 </button>
               `
               : info.staffStatus === 'occupied'
@@ -2044,8 +2171,8 @@
           </div>
 
           <div style="background:#FFFFFF; border-radius:16px; padding:14px; display:flex; gap:12px; align-items:flex-start;">
-            <img src="${leadThumb}" alt="${escapeHtml(order.itemsSummary)}" style="width:58px; height:58px; border-radius:12px; object-fit:cover; flex-shrink:0;" />
-            <div style="font-size:0.82rem; display:grid; gap:4px; flex:1;">
+            <img src="${leadThumb}" alt="${escapeHtml(order.itemsSummary)}" class="queue-item-thumb" />
+            <div style="font-size:0.82rem; display:grid; gap:4px; flex:1; min-width:0; overflow-wrap:break-word;">
               <strong style="font-size:0.92rem;">${escapeHtml(order.customerName)}</strong>
               <span>${escapeHtml(order.itemsSummary)}</span>
               <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
@@ -2360,18 +2487,18 @@
       modalHost.innerHTML = `
         <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Galería de Café del Centro">
           <div class="modal-dialog lightbox-dialog">
-            <div style="position:relative; background:#000; max-height:70vh; overflow:hidden; display:flex; align-items:center; justify-content:center;">
-              <img src="${photo.src}" alt="${escapeHtml(photo.title)}" style="max-height:68vh; width:auto; object-fit:contain;" />
+            <div class="lightbox-stage">
+              <img src="${photo.src}" alt="${escapeHtml(photo.title)}" class="lightbox-img" />
             </div>
-            <div style="padding:18px 22px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
-              <div>
-                <strong style="font-size:1.05rem; display:block;">${escapeHtml(photo.title)} (${ui.lightbox.index + 1}/${GALLERY_PHOTOS.length})</strong>
-                <span style="font-size:0.84rem; opacity:0.85;">${escapeHtml(photo.caption)}</span>
+            <div class="lightbox-footer">
+              <div style="min-width:0;">
+                <strong style="font-size:1.02rem; display:block;">${escapeHtml(photo.title)} (${ui.lightbox.index + 1}/${GALLERY_PHOTOS.length})</strong>
+                <span style="font-size:0.83rem; opacity:0.86;">${escapeHtml(photo.caption)}</span>
               </div>
-              <div style="display:flex; gap:8px;">
-                <button type="button" class="hero-cta-secondary" style="padding:8px 14px;" data-lightbox-step="-1">${ICONS.arrowLeft}<span>Anterior</span></button>
-                <button type="button" class="hero-cta-secondary" style="padding:8px 14px;" data-lightbox-step="1"><span>Siguiente</span>${ICONS.arrowRight}</button>
-                <button type="button" class="hero-cta-primary" style="padding:8px 16px;" data-close-modals>Cerrar</button>
+              <div class="lightbox-footer-actions">
+                <button type="button" class="hero-cta-secondary" style="padding:8px 14px; width:auto;" data-lightbox-step="-1">${ICONS.arrowLeft}<span>Anterior</span></button>
+                <button type="button" class="hero-cta-secondary" style="padding:8px 14px; width:auto;" data-lightbox-step="1"><span>Siguiente</span>${ICONS.arrowRight}</button>
+                <button type="button" class="hero-cta-primary" style="padding:8px 16px; width:auto;" data-close-modals>Cerrar</button>
               </div>
             </div>
           </div>
@@ -2544,6 +2671,24 @@
       const navScreenBtn = target.closest('[data-nav-screen]');
       if (navScreenBtn) {
         navigateToScreen(navScreenBtn.getAttribute('data-nav-screen'));
+        return;
+      }
+
+      // Alternar Vista Móvil Responsiva / Detección de Dispositivo
+      if (target.closest('#btn-mobile-view-toggle') || target.closest('[data-action="toggle-mobile-preview"]')) {
+        ui.isRealMobile = detectMobileDevice();
+        if (ui.isRealMobile) {
+          syncDeviceViewportState();
+          showToast('Dispositivo móvil detectado automáticamente: Vista Móvil activa.');
+          return;
+        }
+        ui.mobilePreviewForced = !ui.mobilePreviewForced;
+        renderAll();
+        showToast(
+          ui.mobilePreviewForced
+            ? 'Vista Móvil responsiva activada (412px).'
+            : 'Vista de Escritorio restaurada.'
+        );
         return;
       }
 
@@ -3203,7 +3348,36 @@
   }
 
   function init() {
+    syncDeviceViewportState();
     attachEventDelegation();
+
+    // Escuchar cambios dinámicos de orientación, redimensionamiento o viewport móvil
+    const handleViewportChange = function () {
+      const prevReal = ui.isRealMobile;
+      const nextReal = detectMobileDevice();
+      if (prevReal !== nextReal) {
+        if (nextReal) {
+          ui.mobilePreviewForced = false;
+        }
+        renderAll();
+      } else {
+        syncDeviceViewportState();
+      }
+    };
+
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', handleViewportChange);
+      window.addEventListener('orientationchange', handleViewportChange);
+    }
+
+    if (typeof window.matchMedia === 'function') {
+      try {
+        const mq = window.matchMedia('(max-width: 768px)');
+        if (mq && typeof mq.addEventListener === 'function') {
+          mq.addEventListener('change', handleViewportChange);
+        }
+      } catch (_) {}
+    }
 
     store.subscribe(function (_nextState, meta) {
       flashSyncBadge(meta && meta.source ? meta.source : '');
